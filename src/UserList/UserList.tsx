@@ -39,33 +39,33 @@ const UsersList = () => {
 
     const handleSave = () => {
         if (!editableUser) return;
-        dispatch(applyLocalUpdate(editableUser)) // Обновляем UI мгновенно
-        dispatch(updateUser(editableUser)) // Отправляем в Supabase
+        dispatch(applyLocalUpdate(editableUser)) // обновляем UI мгновенно
+        dispatch(updateUser(editableUser)) // отправляем в Supabase
     }
 
     useEffect(() => {
         const handleScroll = () => {
             const list = document.getElementById('users-list')
-            if (!list) return;
+            if (!list) return
 
-            const { scrollTop, scrollHeight, clientHeight } = list;
-            const scrollPosition = scrollTop + clientHeight;
+            const { scrollTop, scrollHeight, clientHeight } = list
+            const scrollPosition = scrollTop + clientHeight
 
             if (scrollPosition >= scrollHeight * 0.5) {
                 loadMoreUsers()
             }
         };
 
-        const list = document.getElementById('users-list');
-        if (list) list.addEventListener('scroll', handleScroll);
+        const list = document.getElementById('users-list')
+        if (list) list.addEventListener('scroll', handleScroll)
 
         return () => {
-            if (list) list.removeEventListener('scroll', handleScroll);
-        };
-    }, [loadMoreUsers]);
+            if (list) list.removeEventListener('scroll', handleScroll)
+        }
+    }, [loadMoreUsers])
 
-    if (loading && users.length === 0) return <p>Loading...</p>;
-    if (error) return <p>{error}</p>;
+    if (loading && users.length === 0) return <p>Loading...</p>
+    if (error) return <p>{error}</p>
     return (
         <div className={classes.container}>
             <div

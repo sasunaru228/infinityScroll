@@ -19,6 +19,11 @@ interface UsersState {
     offset: number
 }
 
+interface UpdateUserError {
+    message: string
+    previousUser?: User
+}
+
 const initialState: UsersState = {
     users: [],
     selectedUser: null,
@@ -44,30 +49,43 @@ export const fetchUsers = createAsyncThunk(
     }
 )
 
-export const updateUser = createAsyncThunk(
+export const updateUser = createAsyncThunk<
+    User,
+    User,
+    { rejectValue: UpdateUserError | undefined }
+>(
     'users/updateUser',
-    async (user: User, { rejectWithValue }) => {
+    async (user, { rejectWithValue, getState }) => {
+        const state = getState() as RootState
+        const previousUser = state.users.users.find(u => u.id === user.id)
+
         const { error } = await supabase
             .from('users')
             .update(user)
-            .eq('id', user.id);
+            .eq('id', user.id)
 
-        if (error) return rejectWithValue(error.message);
+        if (error) {
+            return rejectWithValue({
+                message: error.message,
+                previousUser,
+            });
+        }
+
         return user;
     }
-);
+)
 
 const usersSlice = createSlice({
     name: 'users',
     initialState,
     reducers: {
         selectUser: (state, action: PayloadAction<User | null>) => {
-            state.selectedUser = action.payload;
+            state.selectedUser = action.payload
         },
         applyLocalUpdate: (state, action: PayloadAction<User>) => {
-            const index = state.users.findIndex(user => user.id === action.payload.id);
+            const index = state.users.findIndex(user => user.id === action.payload.id)
             if (index !== -1) {
-                state.users[index] = action.payload; // Мгновенное обновление UI
+                state.users[index] = action.payload
             }
         }
     },
@@ -80,7 +98,7 @@ const usersSlice = createSlice({
             .addCase(fetchUsers.fulfilled, (state, action) => {
                 state.loading = false
                 if (action.payload.length < 100) {
-                    state.hasMore = false;
+                    state.hasMore = false
                 }
                 state.users.push(...action.payload)
                 state.offset += action.payload.length
@@ -90,10 +108,24 @@ const usersSlice = createSlice({
                 state.error = action.error.message || 'Error loading users'
             })
             .addCase(updateUser.fulfilled, (_state, action) => {
-                console.log("User updated in Supabase:", action.payload);
+                console.log("User updated: ", action.payload)
             })
-            .addCase(updateUser.rejected, (_state, action) => {
-                console.error("Update failed:", action.payload);
+            .addCase(updateUser.rejected, (state, action) => {
+                const errorPayload = action.payload as UpdateUserError | undefined
+
+                if (!errorPayload) {
+                    console.error("Update failed, but no details provided.")
+                    return
+                }
+
+                console.error("Update failed: ", errorPayload.message)
+
+                if (errorPayload.previousUser) {
+                    const index = state.users.findIndex(user => user.id === errorPayload.previousUser!.id);
+                    if (index !== -1) {
+                        state.users[index] = errorPayload.previousUser!
+                    }
+                }
             });
     },
 });
